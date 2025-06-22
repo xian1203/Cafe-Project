@@ -7,25 +7,27 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Link } from "react-router-dom";
 
 const SignIn = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    
     try {
-      await signIn(email, password);
+      await signIn(username, password);
       navigate("/");
-    } catch (error) {
-      console.error("Sign in error:", error);
+    } catch (error: any) {
+      setError(error.message || "Sign in failed");
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -47,10 +49,10 @@ const SignIn = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Input
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>

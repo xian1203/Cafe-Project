@@ -12,35 +12,16 @@ import Orders from "./pages/Orders";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import AdminDashboard from "./pages/AdminDashboard";
+import Profile from "./pages/Profile";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-// Protected Route Component
-const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
-  const { user, loading, isAdmin } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
-  if (!user) {
-    return <Navigate to="/signin" />;
-  }
-
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/" />;
-  }
-  
-  return <>{children}</>;
-};
-
 const AppRoutes = () => {
-  const { user } = useAuth();
-  
   return (
     <Routes>
-      <Route path="/signin" element={user ? <Navigate to="/" /> : <SignIn />} />
-      <Route path="/signup" element={user ? <Navigate to="/" /> : <SignUp />} />
+      <Route path="/signin" element={<SignIn />} />
+      <Route path="/signup" element={<SignUp />} />
       <Route path="/" element={
         <ProtectedRoute>
           <Index />
@@ -57,8 +38,13 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
-        <ProtectedRoute adminOnly>
+        <ProtectedRoute>
           <AdminDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Profile />
         </ProtectedRoute>
       } />
     </Routes>

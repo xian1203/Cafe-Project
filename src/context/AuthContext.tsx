@@ -1,138 +1,113 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  fetchSignInMethodsForEmail
-} from 'firebase/auth';
-import { FirebaseError } from 'firebase/app';
-import { auth } from '../lib/firebase';
 import { toast } from "sonner";
 
 interface AuthContextType {
-  user: User | null;
-  isAdmin: boolean;
+  user: any;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+  signIn: (username: string, password: string) => Promise<void>;
+  signUp: (username: string, password: string) => Promise<void>;
+  logout: () => void;
+  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [adminStatus, setAdminStatus] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed:', user?.email);
-      setUser(user);
-      if (user) {
-        const adminEmails = ['roger@gmail.com', 'sival@gmail.com', 'admin@gmail.com'];
-        setAdminStatus(adminEmails.includes(user.email || ''));
-      } else {
-        setAdminStatus(false);
+    // On mount, try to fetch user profile if token exists
+    const fetchProfile = async () => {
+      if (token) {
+        setLoading(true);
+        try {
+          const res = await fetch('http://localhost:5000/api/auth/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setUser(data);
+          } else {
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('token');
+          }
+        } catch (e) {
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('token');
+        }
+        setLoading(false);
       }
+    };
+    fetchProfile();
+    // eslint-disable-next-line
+  }, [token]);
+
+  const signIn = async (username: string, password: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.msg || 'Login failed');
+      }
+      const data = await res.json();
+      setToken(data.token);
+      localStorage.setItem('token', data.token);
+      // Fetch user profile
+      const profileRes = await fetch('http://localhost:5000/api/auth/profile', {
+        headers: { 'Authorization': `Bearer ${data.token}` }
+      });
+      const profile = await profileRes.json();
+      setUser(profile);
+      toast.success('Successfully signed in!');
+    } catch (error: any) {
+      toast.error(error.message || 'Login failed');
+      throw error;
+    } finally {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      console.log('Attempting to sign in with email:', email);
-      await signInWithEmailAndPassword(auth, email, password);
-      toast.success("Successfully signed in!");
-    } catch (error) {
-      console.error('Sign in error:', error);
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case 'auth/invalid-credential':
-            toast.error("Invalid email or password");
-            break;
-          case 'auth/user-not-found':
-            toast.error("No account found with this email");
-            break;
-          case 'auth/network-request-failed':
-            toast.error("Network error. Please check your internet connection and try again.");
-            break;
-          default:
-            toast.error("Failed to sign in. Please try again.");
-        }
-      }
-      throw error;
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (username: string, password: string) => {
+    setLoading(true);
     try {
-      // First check if the email already exists
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      
-      if (methods.length > 0) {
-        console.log('Email already exists:', email);
-        throw new FirebaseError('auth/email-already-in-use', 'An account with this email already exists');
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.msg || 'Registration failed');
       }
-
-      // If email doesn't exist, proceed with signup
-      console.log('Creating new account for email:', email);
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      
-      if (result.user) {
-        console.log('Account created successfully for:', email);
-        toast.success("Account created successfully!");
-      }
-    } catch (error) {
-      console.error('Sign up error:', error);
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case 'auth/email-already-in-use':
-            toast.error("An account with this email already exists. Please sign in instead.");
-            break;
-          case 'auth/invalid-email':
-            toast.error("Please enter a valid email address");
-            break;
-          case 'auth/weak-password':
-            toast.error("Password should be at least 6 characters long");
-            break;
-          case 'auth/network-request-failed':
-            toast.error("Network error. Please check your internet connection and try again.");
-            break;
-          default:
-            toast.error("Failed to create account. Please try again.");
-        }
-      }
+      toast.success('Account created successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Registration failed');
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const logout = async () => {
-    try {
-      await signOut(auth);
-      toast.success("Successfully logged out!");
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error("Failed to log out. Please try again.");
-      throw error;
-    }
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
+    toast.success('Successfully logged out!');
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        isAdmin: adminStatus, 
-        loading, 
-        signIn, 
-        signUp, 
-        logout 
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, logout, token }}>
       {children}
     </AuthContext.Provider>
   );
