@@ -1,19 +1,35 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { toast } from "sonner";
+import API from "@/lib/axios";
+const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+export interface User {
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+  role: string;
+  // Add other fields as needed
+}
 
 interface AuthContextType {
-  user: any;
+  user: User | null;
   loading: boolean;
-  signIn: (username: string, password: string) => Promise<void>;
-  signUp: (username: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, role: string) => Promise<void>;
+  signUp: (name: string, username: string, email: string, password: string, role: string) => Promise<void>;
   logout: () => void;
   token: string | null;
+  isAdmin: boolean;
+}
+
+interface Props {
+  children: ReactNode;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
+export const AuthProvider = ({ children }: Props) => {
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState(false);
 
@@ -23,20 +39,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (token) {
         setLoading(true);
         try {
-          const res = await fetch('http://localhost:5000/api/auth/profile', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+          const res = await API.get('/auth/profile', {
+            headers: { Authorization: `Bearer ${token}` }
           });
-          if (res.ok) {
-            const data = await res.json();
-            setUser(data);
-          } else {
-            setUser(null);
-            setToken(null);
-            localStorage.removeItem('token');
-          }
-        } catch (e) {
+          setUser(res.data);
+        } catch (e: unknown) {
           setUser(null);
           setToken(null);
           localStorage.removeItem('token');
@@ -45,54 +52,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
     fetchProfile();
-    // eslint-disable-next-line
   }, [token]);
 
-  const signIn = async (username: string, password: string) => {
+  const signIn = async (email: string, password: string, role: string) => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.msg || 'Login failed');
-      }
-      const data = await res.json();
-      setToken(data.token);
-      localStorage.setItem('token', data.token);
+      const res = await API.post('/auth/login', { email, password, role });
+      setToken(res.data.token);
+      localStorage.setItem('token', res.data.token);
       // Fetch user profile
-      const profileRes = await fetch('http://localhost:5000/api/auth/profile', {
-        headers: { 'Authorization': `Bearer ${data.token}` }
+      const profileRes = await API.get('/auth/profile', {
+        headers: { Authorization: `Bearer ${res.data.token}` }
       });
-      const profile = await profileRes.json();
-      setUser(profile);
+      setUser(profileRes.data);
       toast.success('Successfully signed in!');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
+        // @ts-expect-error: error type from axios may not be inferred correctly
+        toast.error(error.response.data?.msg || error.response.data?.error || 'Login failed');
+      } else if (error instanceof Error) {
       toast.error(error.message || 'Login failed');
+      } else {
+        toast.error('Login failed');
+      }
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const signUp = async (username: string, password: string) => {
+  const signUp = async (name: string, username: string, email: string, password: string, role: string) => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.msg || 'Registration failed');
-      }
+      const res = await API.post('/auth/register', { name, username, email, password, role });
       toast.success('Account created successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
+        // @ts-expect-error: error type from axios may not be inferred correctly
+        toast.error(error.response.data?.msg || error.response.data?.error || 'Registration failed');
+      } else if (error instanceof Error) {
       toast.error(error.message || 'Registration failed');
+      } else {
+        toast.error('Registration failed');
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -107,7 +109,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, logout, token }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      signIn, 
+      signUp, 
+      logout, 
+      token,
+      isAdmin: user?.role === 'admin'
+    }}>
       {children}
     </AuthContext.Provider>
   );

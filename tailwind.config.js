@@ -5,7 +5,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        border: '#d1d5db', // Define the color for the 'border-border' class
+        border: '#d1d5db',
+        primary: {
+          DEFAULT: 'hsl(142, 76%, 36%)',
+          foreground: 'hsl(355.7, 100%, 97.3%)',
+        },
+      },
+      ringColor: {
+        primary: 'hsl(142, 76%, 36%)',
       },
     },
   },

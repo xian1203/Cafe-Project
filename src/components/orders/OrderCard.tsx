@@ -13,16 +13,19 @@ import OrderPaymentDetails from "./OrderPaymentDetails";
 import OrderDeliveryAddress from "./OrderDeliveryAddress";
 
 interface OrderItem {
-  id: number;
-  name: string;
-  price: number;
+  product: {
+    _id: string;
+    name: string;
+    price: number;
+    image: string;
+  };
   quantity: number;
-  image: string;
+  price: number;
 }
 
 interface OrderProps {
   order: {
-    key: string;
+    _id: string;
     items: OrderItem[];
     total: number;
     status: string;
@@ -32,10 +35,11 @@ interface OrderProps {
       state: string;
       zipCode: string;
       country: string;
+      description: string;
+      fullName: string;
     };
     createdAt: string;
-    estimatedDeliveryDate: string;
-    actualDeliveryDate: string | null;
+    updatedAt: string;
     paymentMethod: string;
     paymentStatus: string;
   };
@@ -43,7 +47,7 @@ interface OrderProps {
 
 const OrderCard = ({ order }: OrderProps) => {
   return (
-    <Card key={order.key} className="overflow-hidden">
+    <Card key={order._id} className="overflow-hidden">
       <CardHeader className="bg-gray-50 dark:bg-gray-800">
         <div className="flex justify-between items-start">
           <div>

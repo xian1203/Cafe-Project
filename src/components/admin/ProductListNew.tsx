@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import axios from "@/lib/axios";
-import { Edit, Trash2, Plus, Search, Filter } from "lucide-react";
+import { Edit, Trash2, Eye, Plus, Search, Filter } from "lucide-react";
 
 interface Product {
   _id: string;
@@ -32,7 +32,7 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [loading, setLoading] = useState(false);
 
@@ -44,17 +44,17 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
   // Filter and sort products
   const filteredProducts = products
     .filter(product => 
-      (product.name || '').toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (categoryFilter === "all" || categoryFilter === "" || product.category === categoryFilter)
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (categoryFilter === "" || product.category === categoryFilter)
     )
     .sort((a, b) => {
       switch (sortBy) {
         case "name":
-          return (a.name || '').localeCompare(b.name || '');
+          return a.name.localeCompare(b.name);
         case "price":
           return a.price - b.price;
         case "category":
-          return (a.category || '').localeCompare(b.category || '');
+          return (a.category || "").localeCompare(b.category || "");
         default:
           return 0;
       }
@@ -110,34 +110,32 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
     setIsEditDialogOpen(true);
   };
 
-  const formatPrice = (price: number | undefined | null) => {
-    if (typeof price !== "number" || isNaN(price)) return "N/A";
+  const formatPrice = (price: number) => {
     return `₱${price.toFixed(2)}`;
   };
-
 
   const getDiscountedPrice = (price: number, discount: number) => {
     return price * (1 - discount / 100);
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight">Product Management</h2>
-          <p className="text-muted-foreground text-lg">Manage your product catalog</p>
+          <h2 className="text-2xl font-bold">Product Management</h2>
+          <p className="text-muted-foreground">Manage your product catalog</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="button-modern flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
               Add Product
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl">Add New Product</DialogTitle>
+              <DialogTitle>Add New Product</DialogTitle>
             </DialogHeader>
             <AddProductForm 
               onSubmit={handleAddProduct}
@@ -149,9 +147,15 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
       </div>
 
       {/* Filters and Search */}
-      <div className="card-modern mb-6 p-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters & Search
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -166,7 +170,7 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="">All Categories</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
@@ -185,8 +189,8 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Product Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -212,7 +216,7 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-              <div>
+                <div>
                   <p className="text-2xl font-bold text-primary">
                     {formatPrice(product.discount ? getDiscountedPrice(product.price, product.discount) : product.price)}
                   </p>
@@ -224,7 +228,7 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
                 </div>
                 {product.discount && product.discount > 0 && (
                   <Badge variant="destructive">-{product.discount}%</Badge>
-                  )}
+                )}
               </div>
               
               <div className="flex items-center gap-2">
@@ -237,20 +241,20 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
               </div>
 
               <div className="flex gap-2">
-              <Button
-                variant="outline"
+                <Button
+                  variant="outline"
                   size="sm"
                   className="flex-1"
                   onClick={() => openEditDialog(product)}
-              >
+                >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
-              </Button>
+                </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm">
                       <Trash2 className="h-4 w-4" />
-              </Button>
+                    </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -264,13 +268,13 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
                       <AlertDialogAction
                         onClick={() => handleDeleteProduct(product._id)}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete
+                      >
+                        Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-            </div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -280,7 +284,7 @@ const ProductList = ({ products, onProductUpdate }: ProductListProps) => {
         <Card className="text-center py-12">
           <CardContent>
             <p className="text-muted-foreground text-lg">
-              {searchTerm || (categoryFilter !== "all" && categoryFilter) ? "No products match your filters." : "No products found."}
+              {searchTerm || categoryFilter ? "No products match your filters." : "No products found."}
             </p>
           </CardContent>
         </Card>
@@ -540,4 +544,4 @@ const AddProductForm = ({ onSubmit, onCancel, loading }: AddProductFormProps) =>
   );
 };
 
-export default ProductList;
+export default ProductList; 

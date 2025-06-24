@@ -1,28 +1,60 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { rtdb } from "@/lib/firebase";
-import { ref, onValue, update } from "firebase/database";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Home } from "lucide-react";
 import OrderCard from "@/components/orders/OrderCard";
-import { toast } from "sonner"; // Use the existing toast utility
+import { toast } from "sonner";
+import axios from "@/lib/axios";
+
+interface OrderItem {
+  product: {
+    _id: string;
+    name: string;
+    price: number;
+    image: string;
+  };
+  quantity: number;
+  price: number;
+}
+
+interface Order {
+  _id: string;
+  user: string;
+  items: OrderItem[];
+  total: number;
+  status: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    description: string;
+    fullName: string;
+  };
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt: string;
+  updatedAt: string;
+  remainingTime?: number;
+}
 
 const Orders = () => {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showPreviousOrders, setShowPreviousOrders] = useState(false); // Toggle for previous orders
-  const { user } = useAuth();
+  const [showPreviousOrders, setShowPreviousOrders] = useState(false);
+  const { user, token } = useAuth();
   const navigate = useNavigate();
 
-  const calculateRemainingTime = (createdAt) => {
+  const calculateRemainingTime = (createdAt: string) => {
     const orderTime = new Date(createdAt).getTime();
     const currentTime = Date.now();
     const timeDifference = 180000 - (currentTime - orderTime); // 3 minutes in milliseconds
     return timeDifference > 0 ? timeDifference : 0;
   };
 
-  const cancelOrder = async (orderKey: string, createdAt: string) => {
+  const cancelOrder = async (orderId: string, createdAt: string) => {
     const remainingTime = calculateRemainingTime(createdAt);
 
     if (remainingTime <= 0) {
@@ -31,49 +63,49 @@ const Orders = () => {
     }
 
     try {
-      const orderRef = ref(rtdb, `orders/${orderKey}`);
-      await update(orderRef, { status: "cancelled" });
+      await axios.put(`/orders/${orderId}/cancel`);
       toast.success("Order cancelled successfully.");
+      // Refresh orders after cancellation
+      fetchOrders();
     } catch (error) {
       console.error("Error cancelling order:", error);
       toast.error("Failed to cancel order. Please try again.");
     }
   };
 
-  useEffect(() => {
-    if (!user) return;
+  const fetchOrders = async () => {
+    if (!user || !token) return;
 
-    const ordersRef = ref(rtdb, "orders");
-    console.log("Fetching orders...");
+    try {
+      setLoading(true);
+      const response = await axios.get('/orders');
+      const ordersData = response.data;
 
-    const unsubscribe = onValue(ordersRef, (snapshot) => {
-      const data = snapshot.val();
-      console.log("Orders data received:", data);
-
-      if (data) {
-        const ordersArray = Object.entries(data)
-          .map(([key, value]: [string, any]) => ({
-            key,
-            ...value,
-            remainingTime: calculateRemainingTime(value.createdAt), // Add remaining time
+      const processedOrders = ordersData
+        .map((order: Order) => ({
+          ...order,
+          remainingTime: calculateRemainingTime(order.createdAt),
           }))
-          .filter((order) =>
+        .filter((order: Order) =>
             showPreviousOrders
-              ? order.userId === user.uid && (order.status === "delivered" || order.status === "cancelled")
-              : order.userId === user.uid && order.status !== "delivered" && order.status !== "cancelled"
+            ? order.status === "delivered" || order.status === "cancelled"
+            : order.status !== "delivered" && order.status !== "cancelled"
           )
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        .sort((a: Order, b: Order) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        console.log("Processed orders:", ordersArray);
-        setOrders(ordersArray);
-      } else {
+      setOrders(processedOrders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders");
         setOrders([]);
-      }
+    } finally {
       setLoading(false);
-    });
+    }
+  };
 
-    return () => unsubscribe();
-  }, [user, showPreviousOrders]); // Re-fetch orders when toggle changes
+  useEffect(() => {
+    fetchOrders();
+  }, [user, token, showPreviousOrders]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -86,7 +118,7 @@ const Orders = () => {
     }, 1000); // Update every second
 
     return () => clearInterval(interval);
-  }, [orders]);
+  }, []);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading orders...</div>;
@@ -129,11 +161,11 @@ const Orders = () => {
         ) : (
           <div className="space-y-6">
             {orders.map((order) => (
-              <div key={order.key} className="border rounded-lg p-4 shadow-md">
+              <div key={order._id} className="border rounded-lg p-4 shadow-md">
                 <OrderCard order={order} />
                 {order.status === "processing" && (
                   <>
-                    {order.remainingTime > 0 ? (
+                    {order.remainingTime && order.remainingTime > 0 ? (
                       <div className="text-sm text-gray-600 mb-2">
                         Time left to cancel: {Math.floor(order.remainingTime / 1000)} seconds
                       </div>
@@ -142,9 +174,9 @@ const Orders = () => {
                     )}
                     <Button
                       variant="destructive"
-                      onClick={() => cancelOrder(order.key, order.createdAt)}
+                      onClick={() => cancelOrder(order._id, order.createdAt)}
                       className="mt-4 w-full"
-                      disabled={order.remainingTime <= 0}
+                      disabled={!order.remainingTime || order.remainingTime <= 0}
                     >
                       Cancel Order
                     </Button>

@@ -2,9 +2,9 @@ import { Toaster } from "./components/ui/toaster";
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import Index from "./pages/Index";
 import Checkout from "./pages/Checkout";
@@ -17,42 +17,64 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-const AppRoutes = () => {
-  return (
-    <Routes>
-      <Route path="/signin" element={<SignIn />} />
-      <Route path="/signup" element={<SignUp />} />
-      <Route path="/" element={
+const routes = [
+  {
+    path: "/signin",
+    element: <SignIn />,
+  },
+  {
+    path: "/signup",
+    element: <SignUp />,
+  },
+  {
+    path: "/",
+    element: (
         <ProtectedRoute>
           <Index />
         </ProtectedRoute>
-      } />
-      <Route path="/checkout" element={
+    ),
+  },
+  {
+    path: "/checkout",
+    element: (
         <ProtectedRoute>
           <Checkout />
         </ProtectedRoute>
-      } />
-      <Route path="/orders" element={
+    ),
+  },
+  {
+    path: "/orders",
+    element: (
         <ProtectedRoute>
           <Orders />
         </ProtectedRoute>
-      } />
-      <Route path="/admin" element={
+    ),
+  },
+  {
+    path: "/admin",
+    element: (
         <ProtectedRoute>
           <AdminDashboard />
         </ProtectedRoute>
-      } />
-      <Route path="/profile" element={
+    ),
+  },
+  {
+    path: "/profile",
+    element: (
         <ProtectedRoute>
           <Profile />
         </ProtectedRoute>
-      } />
-    </Routes>
-  );
-};
+    ),
+  },
+];
+
+const router = createBrowserRouter(routes, {
+  future: {
+    v7_relativeSplatPath: true,
+  },
+});
 
 const App = () => (
-  <BrowserRouter>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider>
@@ -60,13 +82,12 @@ const App = () => (
             <CartProvider>
               <Toaster />
               <Sonner />
-              <AppRoutes />
+            <RouterProvider router={router} />
             </CartProvider>
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
-  </BrowserRouter>
 );
 
 export default App;

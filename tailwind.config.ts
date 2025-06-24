@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -19,37 +20,39 @@ export default {
     },
     extend: {
       colors: {
-        amazon: {
-          dark: "#1A1F2C",
-          light: "hsl(var(--background))",
-          hover: "#2A2F3C",
-        },
-        border: "#14452F", // British racing green
-        input: "#18392B", // Dark green
-        ring: "#0F5132", // Castleton dark green
-        foreground: "#212529", // Define a foreground color (e.g., dark gray)
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#0A5C36", // Castleton green
-          foreground: "#FFFFFF", // White text
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
-        secondary: "#14452F", // British racing green
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
         destructive: {
-          DEFAULT: "#18392B", // Dark green
-          foreground: "#FFFFFF", // White text
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: "#1D2E28", // Gunmetal
-          foreground: "#FFFFFF", // White text
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "#0F5132", // Castleton dark green
-          foreground: "#FFFFFF", // White text
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
-        card: "#FFFFFF", // Define a valid color for the card background (e.g., white)
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
         fastfood: {
           red: "#FF0000",
           yellow: "#FFD700",
@@ -64,7 +67,6 @@ export default {
           darkGreen: "#18392B",
           gunmetal: "#1D2E28",
         },
-        secondaryForeground: "#FFFFFF", // Define the missing class
       },
       fontFamily: {
         fastfood: ["Comic Sans MS", "Arial", "sans-serif"],
@@ -103,14 +105,7 @@ export default {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
-      backgroundColor: {
-        page: "#0A5C36", // Castleton green for background
-      },
-      textColor: {
-        primary: "#FFFFFF", // White for text
-        secondary: "#18392B", // Dark green for secondary text
-      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

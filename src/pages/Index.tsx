@@ -2,19 +2,23 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
 import CartSidebar from "@/components/CartSidebar";
-import { rtdb } from "@/lib/firebase";
-import { ref, onValue } from "firebase/database";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Filter, Coffee, Sparkles, Star } from "lucide-react";
+import API from "@/lib/axios";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+// TODO: Replace Firebase logic with backend API calls
 
 interface Product {
-  id: number;
+  _id: string;
   name: string;
   price: number;
   image: string;
-  rating: number;
+  rating?: number;
   discount?: number;
+  category?: string;
 }
 
 const Index = () => {
@@ -22,80 +26,193 @@ const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("name");
 
   useEffect(() => {
-    const productsRef = ref(rtdb, 'products');
-    console.log('Fetching products from Firebase...');
-    
-    const unsubscribe = onValue(productsRef, (snapshot) => {
-      const data = snapshot.val();
-      console.log('Products data received:', data);
-      
-      if (data) {
-        // Convert object to array and ensure all required fields are present
-        const productsArray = Object.values(data)
-          .filter((product: any) => 
-            product && 
-            product.id && 
-            product.name && 
-            product.price !== undefined && 
-            product.image && 
-            product.rating !== undefined
-          ) as Product[];
-        
-        console.log('Transformed products array:', productsArray);
-        setProducts(productsArray);
-      } else {
-        console.log('No products found in database');
-        setProducts([]);
-      }
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching products:', error);
-      toast.error("Failed to load products");
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    setLoading(true);
+    API.get('/products')
+      .then(res => {
+        // Add default rating if not present
+        const productsWithRating = res.data.map((product: Product) => ({
+          ...product,
+          rating: product.rating || 0
+        }));
+        setProducts(productsWithRating);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching products:', err);
+        toast.error('Failed to load products');
+        setLoading(false);
+      });
   }, []);
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Get unique categories
+  const categories = ["all", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+
+  // Filter and sort products
+  const filteredAndSortedProducts = products
+    .filter(product => {
+      const matchesSearch = (product.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "price-low":
+          return a.price - b.price;
+        case "price-high":
+          return b.price - a.price;
+        case "rating":
+          return (b.rating || 0) - (a.rating || 0);
+        case "name":
+        default:
+          return (a.name || '').localeCompare(b.name || '');
+      }
+    });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white dark:from-gray-900 dark:to-gray-800">
       <Navbar onCartClick={() => setIsCartOpen(true)} />
       
+      {/* Hero Section */}
+      <section className="relative py-20 px-4 overflow-hidden">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="relative z-10">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Coffee className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+                Whispering Leaves
+              </h1>
+            </div>
+            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
+              Discover the finest coffee and tea selections, crafted with passion and delivered with care
+            </p>
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="flex items-center gap-1">
+                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                <span className="text-sm font-medium">4.8/5</span>
+              </div>
+              <div className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+              <div className="flex items-center gap-1">
+                <Sparkles className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-medium">Premium Quality</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Floating Elements */}
+        <div className="absolute top-10 left-10 w-20 h-20 bg-green-200 dark:bg-green-800 rounded-full opacity-20 animate-bounce" style={{ animationDelay: '0s' }}></div>
+        <div className="absolute top-20 right-20 w-16 h-16 bg-green-300 dark:bg-green-700 rounded-full opacity-30 animate-bounce" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-10 left-20 w-12 h-12 bg-green-400 dark:bg-green-600 rounded-full opacity-25 animate-bounce" style={{ animationDelay: '2s' }}></div>
+      </section>
+
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col space-y-6">
-          <h1 className="text-3xl font-bold dark:text-white">Featured Products</h1>
-          
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        {/* Search and Filters */}
+        <div className="mb-8 space-y-6">
+          {/* Search Bar */}
+          <div className="relative max-w-2xl mx-auto">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <Input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search for your favorite coffee or tea..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full dark:bg-gray-800 dark:text-white"
+              className="pl-12 pr-4 h-12 text-lg border-2 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-400 transition-colors duration-200"
             />
           </div>
 
-          {loading ? (
-            <div className="text-center py-8 dark:text-white">Loading products...</div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-8 dark:text-white">
-              {searchQuery ? "No products found matching your search" : "No products available"}
+          {/* Filters */}
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {/* Category Filter */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Category:</span>
+              <div className="flex gap-2">
+                {categories.map((category) => (
+                  <Badge
+                    key={category}
+                    variant={selectedCategory === category ? "default" : "outline"}
+                    className={`cursor-pointer transition-all duration-200 ${
+                      selectedCategory === category 
+                        ? "bg-green-600 hover:bg-green-700" 
+                        : "hover:bg-green-50 dark:hover:bg-green-900/20"
+                    }`}
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} {...product} />
-              ))}
+
+            {/* Sort Options */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:border-green-500 dark:focus:border-green-400 transition-colors duration-200"
+              >
+                <option value="name">Name</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="rating">Rating</option>
+              </select>
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Results Count */}
+        <div className="mb-6 text-center">
+          <p className="text-gray-600 dark:text-gray-400">
+            {filteredAndSortedProducts.length} product{filteredAndSortedProducts.length !== 1 ? 's' : ''} found
+          </p>
+        </div>
+
+        {/* Products Grid */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading amazing products...</p>
+            </div>
+          </div>
+        ) : filteredAndSortedProducts.length === 0 ? (
+          <div className="text-center py-20 space-y-4">
+            <div className="w-24 h-24 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+              <Search className="h-12 w-12 text-gray-400" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                {searchQuery ? "No products found" : "No products available"}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                {searchQuery 
+                  ? "Try adjusting your search terms or browse all categories" 
+                  : "Check back soon for new arrivals!"
+                }
+              </p>
+            </div>
+            {searchQuery && (
+              <Button 
+                onClick={() => setSearchQuery("")}
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/20"
+              >
+                Clear Search
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredAndSortedProducts.map((product) => (
+              <ProductCard key={product._id} {...product} />
+            ))}
+          </div>
+        )}
       </main>
 
       <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />

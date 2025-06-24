@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Link } from "react-router-dom";
 
 const SignIn = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -19,15 +20,18 @@ const SignIn = () => {
     setError(null);
     setLoading(true);
     try {
-      await signIn(username, password);
+      await signIn(email, password, role);
       navigate("/");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (error instanceof Error) {
       setError(error.message || "Sign in failed");
+      } else {
+        setError("Sign in failed");
+      }
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -42,17 +46,17 @@ const SignIn = () => {
           </div>
           <CardTitle className="text-center text-2xl font-bold">Sign in to your account</CardTitle>
           <CardDescription className="text-center">
-            Enter your email and password to sign in
+            Enter your email, password, and role to sign in
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -64,6 +68,17 @@ const SignIn = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">Role</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}

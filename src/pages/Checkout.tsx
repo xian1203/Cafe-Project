@@ -4,14 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { rtdb } from "@/lib/firebase";
-import { ref, push, serverTimestamp } from "firebase/database";
 import { useAuth } from "@/context/AuthContext";
 import PayPalButton from "@/components/PayPalButton";
 import GCashButton from "@/components/GCashButton";
 import CashPaymentButton from "@/components/CashPaymentButton";
 import { ArrowLeft } from "lucide-react";
-import SuccessNotification from "../components/SuccessNotification"; // Relative path
+import SuccessNotification from "../components/SuccessNotification";
+import axios from "@/lib/axios";
 
 const Modal = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -34,34 +33,36 @@ const Checkout = () => {
     state: "",
     zipCode: "",
     country: "",
-    description: "", // Add the description property
-    fullName: "", // Add the fullName property
+    description: "",
+    fullName: "",
   });
-  const [showSuccessNotification, setShowSuccessNotification] = useState(false); // State for success notification
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
-  const handleOrderSuccess = async () => {
+  const handleOrderSuccess = async (paymentMethod: string) => {
     try {
-      const ordersRef = ref(rtdb, 'orders');
-      const estimatedDeliveryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      setIsProcessing(true);
       
-      await push(ordersRef, {
-        userId: user?.uid,
-        items,
+      const orderData = {
+        items: items.map(item => ({
+          product: item.product._id,
+          quantity: item.quantity,
+          price: item.price
+        })),
         total,
-        status: "processing",
         address,
-        createdAt: serverTimestamp(),
-        estimatedDeliveryDate: estimatedDeliveryDate.toISOString(),
-        actualDeliveryDate: null,
-        paymentMethod: "Cash/GCash",
+        paymentMethod,
         paymentStatus: "completed"
-      });
+      };
+
+      await axios.post('/orders', orderData);
 
       clearCart();
-      setShowSuccessNotification(true); // Show success notification
+      setShowSuccessNotification(true);
     } catch (error) {
       console.error("Error creating order:", error);
       toast.error("Failed to create order");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -96,15 +97,15 @@ const Checkout = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
           {items.map((item) => (
-            <div key={item.id} className="flex justify-between items-center mb-4">
+            <div key={item.product._id} className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-4">
                 <img
-                  src={item.image}
-                  alt={item.name}
+                  src={item.product.image}
+                  alt={item.product.name}
                   className="w-16 h-16 object-cover rounded"
                 />
                 <div>
-                  <h3 className="font-medium">{item.name}</h3>
+                  <h3 className="font-medium">{item.product.name}</h3>
                   <p className="text-gray-600">Quantity: {item.quantity}</p>
                 </div>
               </div>
@@ -164,7 +165,7 @@ const Checkout = () => {
               </label>
               <Input
                 id="email"
-                value={user?.email || user?.uid || ""}
+                value={user?.email || user?.username || ""}
                 readOnly
                 className="bg-gray-100 cursor-not-allowed"
               />
@@ -174,9 +175,18 @@ const Checkout = () => {
           <div className="mt-6 space-y-6">
             <h2 className="text-xl font-semibold">Payment Method</h2>
             <div className="space-y-4">
-              <PayPalButton amount={total} onSuccess={handleOrderSuccess} />
-              <GCashButton amount={total} onSuccess={handleOrderSuccess} />
-              <CashPaymentButton amount={total} onSuccess={handleOrderSuccess} />
+              <PayPalButton 
+                amount={total} 
+                onSuccess={() => handleOrderSuccess('PayPal')} 
+              />
+              <GCashButton 
+                amount={total} 
+                onSuccess={() => handleOrderSuccess('GCash')} 
+              />
+              <CashPaymentButton 
+                amount={total} 
+                onSuccess={() => handleOrderSuccess('Cash')} 
+              />
             </div>
           </div>
         </div>
@@ -185,9 +195,9 @@ const Checkout = () => {
         <SuccessNotification
           onViewStatus={() => {
             setShowSuccessNotification(false);
-            navigate("/orders"); // Navigate to orders page
+            navigate("/orders");
           }}
-          onDismiss={() => setShowSuccessNotification(false)} // Dismiss notification
+          onDismiss={() => setShowSuccessNotification(false)}
         />
       )}
     </div>

@@ -7,9 +7,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "../components/ui/alert";
 
 const SignUp = () => {
+  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -26,17 +29,24 @@ const SignUp = () => {
       setError("Password should be at least 6 characters long");
       return;
     }
+    if (!name || !email || !username) {
+      setError("Name, username, and email are required");
+      return;
+    }
     setLoading(true);
     try {
-      await signUp(username, password);
+      await signUp(name, username, email, password, role);
       navigate("/");
-    } catch (error: any) {
-      setError(error.message || "An unexpected error occurred. Please try again.");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message || "An unexpected error occurred. Please try again.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -57,9 +67,29 @@ const SignUp = () => {
             <div>
               <Input
                 type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="w-full"
+              />
+            </div>
+            <div>
+              <Input
+                type="text"
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                required
+                className="w-full"
+              />
+            </div>
+            <div>
+              <Input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full"
               />
@@ -83,6 +113,17 @@ const SignUp = () => {
                 required
                 className="w-full"
               />
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">Role</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account..." : "Sign up"}

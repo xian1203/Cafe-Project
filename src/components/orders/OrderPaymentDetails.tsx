@@ -5,7 +5,7 @@ interface OrderPaymentDetailsProps {
   order: {
     paymentMethod: string;
     paymentStatus: string;
-    estimatedDeliveryDate: string;
+    updatedAt: string;
     total: number;
   };
 }
@@ -13,6 +13,13 @@ interface OrderPaymentDetailsProps {
 const OrderPaymentDetails = ({ order }: OrderPaymentDetailsProps) => {
   const formatPrice = (price: number) => {
     return `₱${price.toFixed(2)}`;
+  };
+
+  const getFormattedDate = (date: string | Date | undefined | null) => {
+    if (!date) return "N/A";
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) return "N/A";
+    return format(parsedDate, 'PPP');
   };
 
   return (
@@ -27,9 +34,9 @@ const OrderPaymentDetails = ({ order }: OrderPaymentDetailsProps) => {
         <span className="font-medium dark:text-white capitalize">{order.paymentStatus}</span>
       </div>
       <div className="flex justify-between text-sm">
-        <span className="text-gray-600 dark:text-gray-400">Estimated Delivery</span>
+        <span className="text-gray-600 dark:text-gray-400">Last Updated</span>
         <span className="font-medium dark:text-white">
-          {format(new Date(order.estimatedDeliveryDate), 'PPP')}
+          {getFormattedDate(order.updatedAt)}
         </span>
       </div>
       <Separator className="my-2" />

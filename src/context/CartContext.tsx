@@ -1,146 +1,154 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
-import { rtdb } from "@/lib/firebase";
-import { ref, onValue, set } from "firebase/database";
 import { useAuth } from "./AuthContext";
+import axios from "../lib/axios";
 
 interface Product {
-  id: number;
+  _id: string;
   name: string;
   price: number;
   image: string;
 }
 
-interface CartItem extends Product {
+interface CartItem {
+  product: Product;
   quantity: number;
+  price: number;
+}
+
+interface Cart {
+  _id: string;
+  user: string;
+  items: CartItem[];
+  total: number;
 }
 
 interface CartContextType {
   items: CartItem[];
   addToCart: (product: Product) => void;
-  removeFromCart: (productId: number) => void;
-  updateQuantity: (productId: number, quantity: number) => void;
+  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   total: number;
+  loading: boolean;
+  loadCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
-  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { user, token } = useAuth();
 
+  // Load cart from backend when user logs in
   useEffect(() => {
-    if (!user) {
+    if (user && token) {
+      loadCart();
+    } else {
       setItems([]);
-      return;
     }
+  }, [user, token]);
 
-    const cartRef = ref(rtdb, `carts/${user.uid}`);
-    
-    const unsubscribe = onValue(cartRef, (snapshot) => {
-      const data = snapshot.val();
-      console.log('Cart data received:', data);
-      if (data) {
-        const cartItems = Array.isArray(data) ? data : [];
-        const processedItems = cartItems.map(item => ({
-          ...item,
-          price: Number(item.price)
-        }));
-        console.log('Processed cart items with prices:', processedItems);
-        setItems(processedItems);
-      } else {
-        setItems([]);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  const updateCartInDatabase = async (newItems: CartItem[]) => {
-    if (!user) return;
+  const loadCart = async () => {
+    if (!user || !token) return;
     
     try {
-      const itemsToStore = newItems.map(item => ({
-        ...item,
-        price: Number(item.price)
-      }));
-      console.log('Storing items in cart with prices:', itemsToStore);
-      await set(ref(rtdb, `carts/${user.uid}`), itemsToStore);
+      setLoading(true);
+      const response = await axios.get('/cart');
+      setItems(response.data.items || []);
     } catch (error) {
-      console.error('Error updating cart:', error);
-      toast.error("Failed to update cart");
+      console.error('Failed to load cart:', error);
+      toast.error('Failed to load cart');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const addToCart = (product: Product) => {
-    const productPrice = Number(product.price);
-    console.log('Adding product to cart with price:', productPrice);
-    
-    setItems((currentItems) => {
-      const existingItem = currentItems.find((item) => item.id === product.id);
-      
-      let newItems;
-      if (existingItem) {
-        newItems = currentItems.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-        toast.success("Added another to cart!");
-      } else {
-        newItems = [...currentItems, { ...product, price: productPrice, quantity: 1 }];
-        toast.success("Added to cart!");
-      }
-      
-      updateCartInDatabase(newItems);
-      return newItems;
-    });
+  const addToCart = async (product: Product) => {
+    if (!user || !token) {
+      toast.error('Please log in to add items to cart');
+      return;
+    }
+
+    try {
+      const response = await axios.post('/cart/add', {
+        productId: product._id,
+        quantity: 1
+      });
+      setItems(response.data.items);
+      toast.success("Added to cart!");
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      toast.error('Failed to add to cart');
+    }
   };
 
-  const removeFromCart = (productId: number) => {
-    setItems((currentItems) => {
-      const newItems = currentItems.filter((item) => item.id !== productId);
-      updateCartInDatabase(newItems);
-      return newItems;
-    });
+  const removeFromCart = async (productId: string) => {
+    if (!user || !token) return;
+
+    try {
+      const response = await axios.delete(`/cart/remove/${productId}`);
+      setItems(response.data.items);
     toast.success("Removed from cart!");
+    } catch (error) {
+      console.error('Failed to remove from cart:', error);
+      toast.error('Failed to remove from cart');
+    }
   };
 
-  const updateQuantity = (productId: number, quantity: number) => {
+  const updateQuantity = async (productId: string, quantity: number) => {
+    if (!user || !token) return;
+
     if (quantity < 1) {
-      removeFromCart(productId);
+      await removeFromCart(productId);
       return;
     }
     
-    setItems((currentItems) => {
-      const newItems = currentItems.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      );
-      updateCartInDatabase(newItems);
-      return newItems;
-    });
+    try {
+      const response = await axios.put('/cart/update', {
+        productId,
+        quantity
+      });
+      setItems(response.data.items);
+    } catch (error) {
+      console.error('Failed to update cart:', error);
+      toast.error('Failed to update cart');
+    }
   };
 
-  const clearCart = () => {
-    setItems([]);
-    if (user) {
-      set(ref(rtdb, `carts/${user.uid}`), null);
-    }
+  const clearCart = async () => {
+    if (!user || !token) return;
+
+    try {
+      const response = await axios.delete('/cart/clear');
+      setItems(response.data.items);
     toast.success("Cart cleared!");
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+      toast.error('Failed to clear cart');
+    }
   };
 
   const total = items.reduce((sum, item) => {
     const itemPrice = Number(item.price);
     const itemQuantity = Number(item.quantity);
     const itemTotal = itemPrice * itemQuantity;
-    console.log(`Calculating total for item ${item.name}: ${itemPrice} × ${itemQuantity} = ${itemTotal}`);
     return sum + itemTotal;
   }, 0);
 
   return (
     <CartContext.Provider
-      value={{ items, addToCart, removeFromCart, updateQuantity, clearCart, total }}
+      value={{ 
+        items, 
+        addToCart, 
+        removeFromCart, 
+        updateQuantity, 
+        clearCart, 
+        total, 
+        loading,
+        loadCart
+      }}
     >
       {children}
     </CartContext.Provider>
