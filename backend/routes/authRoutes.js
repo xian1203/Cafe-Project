@@ -9,7 +9,14 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 router.post('/register', async (req, res) => {
   try {
     const { name, username, email, password, role } = req.body;
-    const user = new User({ name, username, email, password, role });
+    // Only allow one admin
+    if (role === 'admin') {
+      const existingAdmin = await User.findOne({ role: 'admin' });
+      if (existingAdmin) {
+        return res.status(403).json({ error: 'An admin already exists. Only one admin is allowed.' });
+      }
+    }
+    const user = new User({ name, username, email, password, role: role === 'admin' ? 'admin' : 'user' });
     await user.save();
     res.status(201).json({ message: 'User created!' });
   } catch (err) {
