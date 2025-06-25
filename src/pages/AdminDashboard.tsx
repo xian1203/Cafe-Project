@@ -257,7 +257,7 @@ const AdminDashboard = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : users.length === 0 ? (
-              <div className="text-center py-12">
+            <div className="text-center py-12">
                 <p className="text-muted-foreground text-lg">No users found.</p>
               </div>
             ) : (
@@ -297,7 +297,7 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
+            </div>
             )}
           </div>
         )}
