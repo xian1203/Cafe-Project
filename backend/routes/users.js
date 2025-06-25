@@ -37,4 +37,34 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// DELETE /api/users/:id - Admin only: Delete a user
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// PUT /api/users/change-password - Authenticated user: Change own password
+router.put('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Check current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) return res.status(400).json({ error: 'Current password is incorrect' });
+
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to update password' });
+  }
+});
+
 module.exports = router; 

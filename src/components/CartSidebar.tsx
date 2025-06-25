@@ -100,58 +100,60 @@ const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
             ) : (
               <div className="space-y-4">
                 {items.map((item) => (
-                  <div
-                    key={item.product._id}
-                    className="group relative bg-gray-50 dark:bg-gray-800 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <img
-                          src={item.product.image}
-                          alt={item.product.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all duration-200"
-                          onClick={() => removeFromCart(item.product._id)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 dark:text-white truncate">{item.product.name}</h3>
-                        <p className="text-green-600 dark:text-green-400 font-semibold">
-                          {formatPrice(item.price)}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
+                  !item.product ? null : (
+                    <div
+                      key={item.product._id}
+                      className="group relative bg-gray-50 dark:bg-gray-800 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <img
+                            src={item.product.image}
+                            alt={item.product.name}
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
-                            onClick={() => updateQuantity(item.product._id, item.quantity - 1)}
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all duration-200"
+                            onClick={() => removeFromCart(item.product._id)}
                           >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => updateQuantity(item.product._id, item.quantity + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
+                            <X className="h-3 w-3" />
                           </Button>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                          {formatPrice(item.price * item.quantity)}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 dark:text-white truncate">{item.product.name}</h3>
+                          <p className="text-green-600 dark:text-green-400 font-semibold">
+                            {formatPrice(item.price)}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => updateQuantity(item.product._id, item.quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => updateQuantity(item.product._id, item.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {formatPrice(item.price * item.quantity)}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )
                 ))}
               </div>
             )}

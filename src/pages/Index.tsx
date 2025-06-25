@@ -4,7 +4,7 @@ import ProductCard from "@/components/ProductCard";
 import CartSidebar from "@/components/CartSidebar";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Coffee, Sparkles, Star } from "lucide-react";
+import { Search, Filter, Coffee, Sparkles, Star, X } from "lucide-react";
 import API from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ interface Product {
   rating?: number;
   discount?: number;
   category?: string;
+  description?: string;
 }
 
 const Index = () => {
@@ -28,6 +29,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("name");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -58,6 +60,8 @@ const Index = () => {
       const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     })
+    // Show newest products first (assuming backend order is oldest-first)
+    .reverse()
     .sort((a, b) => {
       switch (sortBy) {
         case "price-low":
@@ -208,9 +212,59 @@ const Index = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredAndSortedProducts.map((product) => (
-              <ProductCard key={product._id} {...product} />
+            {filteredAndSortedProducts.map((product, idx) => (
+              <div
+                key={product._id}
+                className={
+                  idx === 0
+                    ? "relative animate-[slideIn_0.8s_ease-out] shadow-[0_0_16px_4px_rgba(34,197,94,0.3)] z-10 cursor-pointer"
+                    : "cursor-pointer"
+                }
+                style={idx === 0 ? { animationName: 'slideIn', animationDuration: '0.8s', animationTimingFunction: 'ease-out' } : {}}
+                onClick={() => setSelectedProduct(product)}
+              >
+                <ProductCard {...product} />
+                {idx === 0 && (
+                  <span className="absolute top-2 right-2 bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow animate-pulse">LIVE</span>
+                )}
+              </div>
             ))}
+          </div>
+        )}
+        {/* Product Details Modal */}
+        {selectedProduct && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+            onClick={() => setSelectedProduct(null)}
+          >
+            <div
+              className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 max-w-lg w-full animate-zoom-in"
+              style={{ animation: 'zoomIn 0.4s cubic-bezier(0.4,0,0.2,1)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors"
+                onClick={() => setSelectedProduct(null)}
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+              <img
+                src={selectedProduct.image}
+                alt={selectedProduct.name}
+                className="w-full h-64 object-cover rounded-xl mb-6 shadow-lg"
+              />
+              <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">{selectedProduct.name}</h2>
+              <p className="text-gray-700 dark:text-gray-300 mb-4">{selectedProduct.description || "No description available."}</p>
+              <div className="flex items-center gap-4">
+                <span className="text-xl font-bold text-green-600 dark:text-green-400">₱{selectedProduct.price.toFixed(2)}</span>
+                {selectedProduct.rating && (
+                  <span className="flex items-center gap-1 text-yellow-500 font-medium">
+                    <Star className="h-5 w-5" /> {selectedProduct.rating.toFixed(1)}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </main>
@@ -219,5 +273,18 @@ const Index = () => {
     </div>
   );
 };
+
+// Add keyframes for zoomIn and fadeIn
+const style = document.createElement('style');
+style.innerHTML = `
+@keyframes zoomIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}`;
+document.head.appendChild(style);
 
 export default Index;

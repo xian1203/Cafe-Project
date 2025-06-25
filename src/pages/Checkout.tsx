@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import PayPalButton from "@/components/PayPalButton";
 import GCashButton from "@/components/GCashButton";
 import CashPaymentButton from "@/components/CashPaymentButton";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Home, MapPin, Mail, User as UserIcon, FileText } from "lucide-react";
 import SuccessNotification from "../components/SuccessNotification";
 import axios from "@/lib/axios";
 
@@ -80,10 +80,13 @@ const Checkout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-3xl mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white dark:from-gray-900 dark:to-gray-800 py-12 flex items-center justify-center">
+      <div className="w-full max-w-3xl mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Checkout</h1>
+          <div className="flex items-center gap-2">
+            <Home className="h-8 w-8 text-green-600 dark:text-green-400 animate-bounce" />
+            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Checkout</h1>
+          </div>
           <Button
             variant="outline"
             onClick={() => navigate("/")}
@@ -93,9 +96,8 @@ const Checkout = () => {
             Back to Home
           </Button>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 mb-8 animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100 text-center">Order Summary</h2>
           {items.map((item) => (
             <div key={item.product._id} className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-4">
@@ -109,7 +111,7 @@ const Checkout = () => {
                   <p className="text-gray-600">Quantity: {item.quantity}</p>
                 </div>
               </div>
-              <p className="font-bold">₱{item.price * item.quantity}</p>
+              <p className="text-lg font-bold">₱{item.price * item.quantity}</p>
             </div>
           ))}
           <div className="border-t pt-4 mt-4">
@@ -119,61 +121,57 @@ const Checkout = () => {
             </div>
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Delivery Information</h2>
-          
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100 text-center">Delivery Information</h2>
           <div className="space-y-4">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium mb-1">
-                Full Name
-              </label>
+            <div className="relative">
+              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
               <Input
                 id="fullName"
                 required
                 value={address.fullName || ""}
                 onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
                 placeholder="Full Name"
+                className="pl-10 text-lg py-3 w-full text-gray-900 dark:text-gray-100 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-400 transition-colors duration-200"
+                style={{ color: 'black' }}
               />
             </div>
-            <div>
-              <label htmlFor="street" className="block text-sm font-medium mb-1">
-                Street Address
-              </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
               <Input
                 id="street"
                 required
                 value={address.street}
                 onChange={(e) => setAddress({ ...address, street: e.target.value })}
                 placeholder="1234 Main St"
+                className="pl-10 text-lg py-3 w-full text-gray-900 dark:text-gray-100 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-400 transition-colors duration-200"
+                style={{ color: 'black' }}
               />
             </div>
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium mb-1">
-                Description
-              </label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
               <Input
                 id="description"
                 value={address.description || ""}
                 onChange={(e) => setAddress({ ...address, description: e.target.value })}
                 placeholder="Additional details about the delivery"
+                className="pl-10 text-lg py-3 w-full text-gray-900 dark:text-gray-100 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-400 transition-colors duration-200"
+                style={{ color: 'black' }}
               />
             </div>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1">
-                Email/Username
-              </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
               <Input
                 id="email"
                 value={user?.email || user?.username || ""}
                 readOnly
-                className="bg-gray-100 cursor-not-allowed"
+                className="pl-10 text-lg py-3 w-full bg-gray-100 cursor-not-allowed text-gray-900 dark:text-gray-100 rounded-xl border-2 border-gray-200 dark:border-gray-700"
+                style={{ color: 'black' }}
               />
             </div>
           </div>
-
-          <div className="mt-6 space-y-6">
-            <h2 className="text-xl font-semibold">Payment Method</h2>
+          <div className="mt-8 space-y-6">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 text-center">Payment Method</h2>
             <div className="space-y-4">
               <PayPalButton 
                 amount={total} 

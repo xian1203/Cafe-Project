@@ -53,10 +53,10 @@ const OrderItems = ({ items }: OrderItemsProps) => {
               <div className="flex-grow">
                 <h4 className="font-medium dark:text-white">{item.product.name || "Unknown Product"}</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Quantity: {item.quantity ?? "N/A"} × {formatPrice(item.price)}
+                  Quantity: {typeof item.quantity === 'number' ? item.quantity : "N/A"} × {typeof item.price === 'number' ? formatPrice(item.price) : "N/A"}
                 </p>
                 <p className="font-medium dark:text-white">
-                  Subtotal: {formatPrice(item.price * item.quantity)}
+                  Subtotal: {typeof item.price === 'number' && typeof item.quantity === 'number' ? formatPrice(item.price * item.quantity) : "N/A"}
                 </p>
               </div>
             </div>
